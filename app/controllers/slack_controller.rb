@@ -5,9 +5,12 @@ class SlackController < ApplicationController
     case params[:text].strip.downcase
     when 'eth'
       price = get_eth_price
-      render json: { text: "The current price of Ethereum is $#{price}" }
+      render json: {
+        response_type: "in_channel", # This makes the response visible to everyone in the channel
+        text: "The current price of Ethereum is $#{price}"
+      }
     else
-      render json: { text: "Unsupported command" }
+      render json: { text: "I only do Ethereum. If you want more, Venmo Max $5 @Max-Levine-2"}
     end
   end
 
