@@ -9,6 +9,7 @@ class SlackController < ApplicationController
       else
         render json: { text: "Unsupported command" }
       end
+    end
   
     def get_eth_price
       response = HTTParty.get('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd')
