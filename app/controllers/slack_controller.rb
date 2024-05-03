@@ -13,14 +13,14 @@ class SlackController < ApplicationController
 
   private
   def get_eth_price
-    url = 'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd'
+    url = ENV['GET_PRICE_URL'] + ENV['CYRPTOCOMPARE_API_KEY']
     response = HTTParty.get(url)
   
     # Log the response for debugging
     Rails.logger.info("API Response: #{response}")
   
     if response.success?
-      ethereum_price = response.parsed_response['ethereum']['usd']
+      ethereum_price = response.parsed_response['USD']
       Rails.logger.info("Ethereum Price: #{ethereum_price}")
       return ethereum_price
     else
