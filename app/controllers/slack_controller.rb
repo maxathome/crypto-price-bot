@@ -9,14 +9,20 @@ class SlackController < ApplicationController
         response_type: "in_channel", # This makes the response visible to everyone in the channel
         text: "The current price of Ethereum is $#{price}"
       }
+    when 'cper'
+      price = get_cper_price
+      render json: {
+        response_type: "in_channel", # This makes the response visible to everyone in the channel
+        text: "The current price of Copper is $#{price}"
+      }
     else
-      render json: { text: "I only do Ethereum. If you want more, Venmo Max $5 @Max-Levine-2"}
+      render json: { text: "I only do Ethereum and Copper. If you want more, Venmo Max $5 @Max-Levine-2"}
     end
   end
 
   private
   def get_eth_price
-    url = ENV['GET_PRICE_URL'] + ENV['CYRPTOCOMPARE_API_KEY']
+    url = ENV['GET_CYRPTO_PRICE_URL'] + ENV['CYRPTOCOMPARE_API_KEY']
     response = HTTParty.get(url)
   
     # Log the response for debugging
@@ -29,6 +35,27 @@ class SlackController < ApplicationController
     else
       # Log error or notify about the failure
       Rails.logger.error("Failed to retrieve Ethereum price from API")
+      return nil # Or handle this situation appropriately
+    end
+  rescue => e
+    Rails.logger.error("Exception occurred: #{e.message}")
+    nil
+  end
+  
+  def get_cper_price 
+    url = ENV['GET_STOCK_PRICE_URL'] + ENV['ALPHAVANTAGE_API_KEY']
+    response = HTTParty.get(url)
+  
+    # Log the response for debugging
+    Rails.logger.info("API Response: #{response}")
+  
+    if response.success?
+      copper_price = response.parsed_response['Global Quote']['05. price'].to_f.round(2)
+      Rails.logger.info("Copper Price: #{copper_price}")
+      return copper_price
+    else
+      # Log error or notify about the failure
+      Rails.logger.error("Failed to retrieve Copper price from API")
       return nil # Or handle this situation appropriately
     end
   rescue => e
