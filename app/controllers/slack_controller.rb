@@ -71,25 +71,4 @@ class SlackController < ApplicationController
     Rails.logger.error("Exception occurred: #{e.message}")
     nil
   end
-
-  # def get_stock_price 
-  #   url = ENV['GET_STOCK_PRICE_URL'] + ENV['ALPHAVANTAGE_API_KEY']
-  #   response = HTTParty.get(url)
-  
-  #   # Log the response for debugging
-  #   Rails.logger.info("API Response: #{response}")
-  
-  #   if response.success?
-  #     copper_price = response.parsed_response['Global Quote']['05. price'].to_f.round(2)
-  #     Rails.logger.info("Copper Price: #{copper_price}")
-  #     return copper_price
-  #   else
-  #     # Log error or notify about the failure
-  #     Rails.logger.error("Failed to retrieve Copper price from API")
-  #     return nil # Or handle this situation appropriately
-  #   end
-  # rescue => e
-  #   Rails.logger.error("Exception occurred: #{e.message}")
-  #   nil
-  # end  
 end
