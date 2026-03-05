@@ -20,52 +20,31 @@ class SlackController < ApplicationController
   end
 
   private
+
   def get_crypto_price(crypto_symbol)
-    base_url = ENV['GET_CRYPTO_PRICE_URL']
-    input_url =  base_url.gsub(/fsym=[^&]*/, "fsym=#{crypto_symbol}")
-    url = input_url + ENV['CRYPTOCOMPARE_API_KEY']
-    response = HTTParty.get(url)
-  
-    # Log the response for debugging
-    Rails.logger.info("API Response: #{response}")
-  
-    if response.parsed_response["Response"] == "Error"
-      Rails.logger.info("Symbol not found")
-      return "NOT FOUND"
-    elsif response.success?
-      crypto_price = response.parsed_response['USD']
-      Rails.logger.info("Crypto Price: #{crypto_price}")
-      return crypto_price
-    else
-      # Log error or notify about the failure
-      Rails.logger.error("Failed to retrieve Crypto price from API")
-      return nil # Or handle this situation appropriately
-    end
-  rescue => e
-    Rails.logger.error("Exception occurred: #{e.message}")
-    nil
+    get_price("#{crypto_symbol}/USD")
   end
 
   def get_stock_price(stock_symbol)
-    base_url = ENV['GET_STOCK_PRICE_URL']
-    input_url =  base_url.gsub(/symbol=[^&]*/, "symbol=#{stock_symbol}")
-    url = input_url + ENV['ALPHAVANTAGE_API_KEY']
+    get_price(stock_symbol)
+  end
+
+  def get_price(symbol)
+    url = ENV['TWELVE_DATA_URL'] + symbol + "&apikey=" + ENV['TWELVE_DATA_API_KEY']
     response = HTTParty.get(url)
-  
-    # Log the response for debugging
+
     Rails.logger.info("API Response: #{response}")
-  
-    if response.parsed_response['Global Quote'] == {}
-      Rails.logger.info("Symbol not found")
-      return "NOT FOUND"
-    elsif response.success?
-      stock_price = response.parsed_response['Global Quote']['05. price'].to_f.round(2)
-      Rails.logger.info("Stock Price: #{stock_price}")
-      return stock_price
+
+    if response.success? && response.parsed_response['price']
+      price = response.parsed_response['price'].to_f.round(2)
+      Rails.logger.info("Price: #{price}")
+      price
+    elsif response.parsed_response['message']
+      Rails.logger.info("Symbol not found: #{response.parsed_response['message']}")
+      "NOT FOUND"
     else
-      # Log error or notify about the failure
-      Rails.logger.error("Failed to retrieve Stock price from API")
-      return nil # Or handle this situation appropriately
+      Rails.logger.error("Failed to retrieve price from API")
+      nil
     end
   rescue => e
     Rails.logger.error("Exception occurred: #{e.message}")
