@@ -66,13 +66,15 @@ class SlackController < ApplicationController
     twelve_data_symbol = type == "crypto" ? "#{symbol}/USD" : symbol
     quote = get_quote(twelve_data_symbol)
 
-    HTTParty.post(response_url, {
+    delete_response = HTTParty.post(response_url, {
       headers: { "Content-Type" => "application/json" },
       body: { delete_original: true }.to_json
     })
+    Rails.logger.info("Delete response: #{delete_response.body}")
 
     channel = payload["channel"]["id"]
-    HTTParty.post("https://slack.com/api/chat.postMessage", {
+    Rails.logger.info("Posting to channel: #{channel}")
+    post_response = HTTParty.post("https://slack.com/api/chat.postMessage", {
       headers: {
         "Content-Type" => "application/json",
         "Authorization" => "Bearer #{ENV['SLACK_BOT_TOKEN']}"
@@ -82,6 +84,7 @@ class SlackController < ApplicationController
         text: format_message(twelve_data_symbol, quote)
       }.to_json
     })
+    Rails.logger.info("Post response: #{post_response.body}")
 
     render json: {}, status: :ok
   end
