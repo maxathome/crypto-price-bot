@@ -69,8 +69,14 @@ class SlackController < ApplicationController
     HTTParty.post(response_url, {
       headers: { "Content-Type" => "application/json" },
       body: {
+        delete_original: true
+      }.to_json
+    })
+
+    HTTParty.post(response_url, {
+      headers: { "Content-Type" => "application/json" },
+      body: {
         response_type: "in_channel",
-        replace_original: false,
         text: format_message(twelve_data_symbol, quote)
       }.to_json
     })
