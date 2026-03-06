@@ -60,15 +60,21 @@ class SlackController < ApplicationController
   def interactions
     payload = JSON.parse(params[:payload])
     action = payload["actions"].first
+    response_url = payload["response_url"]
     symbol, type = action["value"].split("|")
 
     twelve_data_symbol = type == "crypto" ? "#{symbol}/USD" : symbol
     quote = get_quote(twelve_data_symbol)
 
-    render json: {
-      response_type: "in_channel",
-      text: format_message(twelve_data_symbol, quote)
-    }
+    HTTParty.post(response_url, {
+      headers: { "Content-Type" => "application/json" },
+      body: {
+        response_type: "in_channel",
+        text: format_message(twelve_data_symbol, quote)
+      }.to_json
+    })
+
+    render json: {}, status: :ok
   end
 
   private
