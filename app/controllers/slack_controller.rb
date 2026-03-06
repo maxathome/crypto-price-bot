@@ -1,33 +1,95 @@
 class SlackController < ApplicationController
   skip_before_action :verify_authenticity_token
 
-  def stocks
-    stock_input = params[:text].strip.downcase
-    quote = get_stock_quote(stock_input)
+  CRYPTO_SYMBOLS = %w[BTC ETH].freeze
+
+  AMBIGUOUS_SYMBOLS = {
+    "XRP"  => { crypto_name: "Ripple",       stock_name: "Bitwise XRP ETF" },
+    "BCH"  => { crypto_name: "Bitcoin Cash", stock_name: "Banco de Chile" },
+    "LINK" => { crypto_name: "Chainlink",    stock_name: "Interlink Electronics" }
+  }.freeze
+
+  def price
+    input = params[:text].strip.upcase
+
+    if AMBIGUOUS_SYMBOLS.key?(input)
+      meta = AMBIGUOUS_SYMBOLS[input]
+      render json: {
+        response_type: "ephemeral",
+        blocks: [
+          {
+            type: "section",
+            text: { type: "mrkdwn", text: "Which *#{input}* did you mean?" }
+          },
+          {
+            type: "actions",
+            elements: [
+              {
+                type: "button",
+                text: { type: "plain_text", text: "#{input} — #{meta[:crypto_name]} (Crypto)" },
+                value: "#{input}|crypto",
+                action_id: "price_crypto"
+              },
+              {
+                type: "button",
+                text: { type: "plain_text", text: "#{input} — #{meta[:stock_name]} (Stock)" },
+                value: "#{input}|stock",
+                action_id: "price_stock"
+              }
+            ]
+          }
+        ]
+      }
+      return
+    end
+
+    symbol = CRYPTO_SYMBOLS.include?(input) ? "#{input}/USD" : input
+    quote = get_quote(symbol)
+
+    if quote.nil? && !CRYPTO_SYMBOLS.include?(input)
+      quote = get_quote("#{input}/USD")
+      symbol = "#{input}/USD"
+    end
+
     render json: {
-         response_type: "in_channel",
-         text: format_message(stock_input.upcase, quote)
-       }
+      response_type: "in_channel",
+      text: format_message(symbol, quote)
+    }
   end
 
-  def crypto
-    crypto_input = params[:text].strip.downcase
-    quote = get_crypto_quote(crypto_input)
-    render json: {
-        response_type: "in_channel",
-        text: format_message(crypto_input.upcase, quote)
-      }
+  def interactions
+    payload = JSON.parse(params[:payload])
+    action = payload["actions"].first
+    response_url = payload["response_url"]
+    symbol, type = action["value"].split("|")
+
+    twelve_data_symbol = type == "crypto" ? "#{symbol}/USD" : symbol
+    quote = get_quote(twelve_data_symbol)
+
+    delete_response = HTTParty.post(response_url, {
+      headers: { "Content-Type" => "application/json" },
+      body: { delete_original: true }.to_json
+    })
+    Rails.logger.info("Delete response: #{delete_response.body}")
+
+    channel = payload["channel"]["id"]
+    Rails.logger.info("Posting to channel: #{channel}")
+    post_response = HTTParty.post("https://slack.com/api/chat.postMessage", {
+      headers: {
+        "Content-Type" => "application/json",
+        "Authorization" => "Bearer #{ENV['SLACK_BOT_TOKEN']}"
+      },
+      body: {
+        channel: channel,
+        text: format_message(twelve_data_symbol, quote)
+      }.to_json
+    })
+    Rails.logger.info("Post response: #{post_response.body}")
+
+    render json: {}, status: :ok
   end
 
   private
-
-  def get_crypto_quote(crypto_symbol)
-    get_quote("#{crypto_symbol}/USD")
-  end
-
-  def get_stock_quote(stock_symbol)
-    get_quote(stock_symbol)
-  end
 
   def get_quote(symbol)
     url = ENV['TWELVE_DATA_URL'] + symbol + "&apikey=" + ENV['TWELVE_DATA_API_KEY']
