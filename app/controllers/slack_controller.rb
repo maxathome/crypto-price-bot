@@ -68,15 +68,17 @@ class SlackController < ApplicationController
 
     HTTParty.post(response_url, {
       headers: { "Content-Type" => "application/json" },
-      body: {
-        delete_original: true
-      }.to_json
+      body: { delete_original: true }.to_json
     })
 
-    HTTParty.post(response_url, {
-      headers: { "Content-Type" => "application/json" },
+    channel = payload["channel"]["id"]
+    HTTParty.post("https://slack.com/api/chat.postMessage", {
+      headers: {
+        "Content-Type" => "application/json",
+        "Authorization" => "Bearer #{ENV['SLACK_BOT_TOKEN']}"
+      },
       body: {
-        response_type: "in_channel",
+        channel: channel,
         text: format_message(twelve_data_symbol, quote)
       }.to_json
     })
